@@ -1,0 +1,187 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "demo-app",
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://example.com/demo",
+  "creationInfo": {
+    "created": "2026-10-13T00:00:00Z",
+    "creators": [
+      "Tool: test"
+    ]
+  },
+  "documentDescribes": [
+    "SPDXRef-root"
+  ],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-root",
+      "name": "demo-app",
+      "versionInfo": "1.1.0",
+      "downloadLocation": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-lodash-4.17.21",
+      "name": "lodash",
+      "versionInfo": "4.17.21",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/lodash@4.17.21"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-express-4.18.2",
+      "name": "express",
+      "versionInfo": "4.18.2",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/express@4.18.2"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-qs-6.11.0",
+      "name": "qs",
+      "versionInfo": "6.11.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/qs@6.11.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-minimist-1.2.5",
+      "name": "minimist",
+      "versionInfo": "1.2.5",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/minimist@1.2.5"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-debug-4.3.4",
+      "name": "debug",
+      "versionInfo": "4.3.4",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/debug@4.3.4"
+        }
+      ],
+      "supplier": "Organization: Evil Corp (evil@example.com)"
+    },
+    {
+      "SPDXID": "SPDXRef-chalk-5.0.0",
+      "name": "chalk",
+      "versionInfo": "5.0.0",
+      "licenseConcluded": "GPL-3.0-only",
+      "licenseDeclared": "GPL-3.0-only",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/chalk@5.0.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef--types-node-20.1.0",
+      "name": "@types/node",
+      "versionInfo": "20.1.0",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40types/node@20.1.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-copyleft-lib-1.0.0",
+      "name": "copyleft-lib",
+      "versionInfo": "1.0.0",
+      "licenseConcluded": "AGPL-3.0-only",
+      "licenseDeclared": "AGPL-3.0-only",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/copyleft-lib@1.0.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-axios-0.21.0",
+      "name": "axios",
+      "versionInfo": "0.21.0",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/axios@0.21.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-dual-2.0.0",
+      "name": "dual",
+      "versionInfo": "2.0.0",
+      "licenseConcluded": "MIT OR GPL-3.0-only",
+      "licenseDeclared": "MIT OR GPL-3.0-only",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/dual@2.0.0"
+        }
+      ]
+    }
+  ]
+}

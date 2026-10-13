@@ -1,0 +1,1 @@
+{ "name": "fixture-app", "version": "1.0.0", "license": "MIT", "dependencies": { "left": "^1.0.0", "copyleft": "^2.0.0" }, "devDependencies": { "tester": "^3.0.0" } }

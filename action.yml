@@ -1,0 +1,68 @@
+name: 'sbom-diff-sentinel'
+description: 'Diff SBOMs between base and head: added/removed/upgraded/downgraded deps, license and supplier changes, new vs fixed OSV vulnerabilities'
+author: 'Louis Wright'
+branding: { icon: 'git-pull-request', color: 'orange' }
+inputs:
+  base: { description: 'Base SBOM file or git ref (default: origin/<PR base branch>; needs actions/checkout with fetch-depth: 0)', default: '' }
+  head: { description: 'Head SBOM file or project directory (default: project)', default: '' }
+  project: { description: 'Project directory', default: '.' }
+  fail-on: { description: 'critical | high | medium | low | info | none', default: 'high' }
+  copyleft: { description: 'weak | strong | network | none', default: 'strong' }
+  max-changes: { description: 'Fail when more than this many components change', default: '' }
+  include-dev: { description: 'Include devDependencies when generating (true/false)', default: 'false' }
+  offline: { description: 'Skip the OSV.dev lookup (true/false)', default: 'false' }
+  config: { description: 'Path to JSON config file', default: '' }
+  sarif: { description: 'Write SARIF to this path', default: '' }
+  json: { description: 'Write JSON report to this path', default: '' }
+  job-summary: { description: 'Write the Markdown report to the job summary (true/false)', default: 'true' }
+  args: { description: 'Extra CLI arguments', default: '' }
+outputs:
+  markdown-file: { description: 'Path of the Markdown report (post it as a PR comment)', value: '${{ steps.run.outputs.markdown-file }}' }
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with: { node-version: '20' }
+    - name: Install sbom-diff-sentinel dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error
+    - id: run
+      shell: bash
+      env:
+        SD_BASE: ${{ inputs.base }}
+        SD_HEAD: ${{ inputs.head }}
+        SD_PROJECT: ${{ inputs.project }}
+        SD_FAIL_ON: ${{ inputs.fail-on }}
+        SD_COPYLEFT: ${{ inputs.copyleft }}
+        SD_MAX: ${{ inputs.max-changes }}
+        SD_DEV: ${{ inputs.include-dev }}
+        SD_OFFLINE: ${{ inputs.offline }}
+        SD_CONFIG: ${{ inputs.config }}
+        SD_SARIF: ${{ inputs.sarif }}
+        SD_JSON: ${{ inputs.json }}
+        SD_SUMMARY: ${{ inputs.job-summary }}
+        SD_ARGS: ${{ inputs.args }}
+        SD_BIN: ${{ github.action_path }}/bin/sbom-diff-sentinel.js
+        FORCE_COLOR: '1'
+      run: |
+        md="$RUNNER_TEMP/sbom-diff-sentinel.md"
+        base="$SD_BASE"
+        if [ -z "$base" ] && [ -n "${GITHUB_BASE_REF:-}" ]; then base="origin/$GITHUB_BASE_REF"; fi
+        if [ -z "$base" ]; then echo "::error::No base: set the 'base' input (SBOM file or git ref) or run on pull_request"; exit 2; fi
+        args=(--base "$base" -C "$SD_PROJECT" --fail-on "$SD_FAIL_ON" --copyleft "$SD_COPYLEFT" --markdown "$md")
+        [ -n "$SD_HEAD" ] && args+=(--head "$SD_HEAD")
+        [ -n "$SD_MAX" ] && args+=(--max-changes "$SD_MAX")
+        [ "$SD_DEV" = "true" ] && args+=(--include-dev)
+        [ "$SD_OFFLINE" = "true" ] && args+=(--offline)
+        [ -n "$SD_CONFIG" ] && args+=(--config "$SD_CONFIG")
+        [ -n "$SD_SARIF" ] && args+=(--sarif "$SD_SARIF")
+        [ -n "$SD_JSON" ] && args+=(--json "$SD_JSON")
+        set +e
+        # shellcheck disable=SC2086
+        node "$SD_BIN" "${args[@]}" $SD_ARGS
+        code=$?
+        set -e
+        echo "markdown-file=$md" >> "$GITHUB_OUTPUT"
+        if [ "$SD_SUMMARY" = "true" ] && [ -f "$md" ]; then cat "$md" >> "$GITHUB_STEP_SUMMARY"; fi
+        exit $code

@@ -1,0 +1,23 @@
+{
+  "name": "sbom-diff-sentinel",
+  "version": "0.0.0",
+  "description": "SBOM diff gate: compares CycloneDX 1.4-1.6 / SPDX 2.3 SBOMs or git refs, reports added, removed, upgraded and downgraded components plus license, supplier and hash changes, checks OSV.dev for new vs fixed vulns, and enforces policy. Text/JSON/SARIF/Markdown, GitHub Action.",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    "./package.json": "./package.json"
+  },
+  "bin": { "sbom-diff-sentinel": "bin/sbom-diff-sentinel.js" },
+  "files": ["src", "bin", "action.yml", "README.md", "CHANGELOG.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "dependencies": { "license-sentinel": "1.0.0" },
+  "keywords": ["sbom", "sbom-diff", "cyclonedx", "spdx", "osv", "vulnerability", "supply-chain-security", "dependency-review", "license", "sarif", "cli", "github-action", "devsecops", "security"],
+  "author": "Louis Wright <hello@louiswright.co.uk> (https://github.com/MrLouisWright)",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/MrLouisWright/sbom-diff-sentinel.git" },
+  "bugs": { "url": "https://github.com/MrLouisWright/sbom-diff-sentinel/issues" },
+  "homepage": "https://github.com/MrLouisWright/sbom-diff-sentinel#readme"
+}

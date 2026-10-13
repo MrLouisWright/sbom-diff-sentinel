@@ -1,0 +1,10 @@
+export { parseSbom, readSbom, parseCycloneDX, parseSPDX, parsePurl } from './sbom.js';
+export { generateSbom, generateSbomAtRef, generateCycloneDX } from './generate.js';
+export { diffSboms } from './diff.js';
+export { lookupVulns, osvQuery, OSV_URL } from './osv.js';
+export { cvss3Score, osvSeverity } from './cvss.js';
+export { categoryOf, isCopyleft } from './license.js';
+export { compareVersions } from './version.js';
+export { analyze, exitCode, validateConfig, DEFAULTS } from './analyze.js';
+export { formatText, formatJson, formatSarif, formatMarkdown } from './format.js';
+export { RULES, SEVERITIES } from './rules.js';
