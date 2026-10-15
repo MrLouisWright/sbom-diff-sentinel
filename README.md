@@ -1,5 +1,7 @@
 # sbom-diff-sentinel
 
+[![npm version](https://img.shields.io/npm/v/sbom-diff-sentinel.svg)](https://www.npmjs.com/package/sbom-diff-sentinel) [![CI](https://github.com/MrLouisWright/sbom-diff-sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/MrLouisWright/sbom-diff-sentinel/actions/workflows/ci.yml) [![Node](https://img.shields.io/node/v/sbom-diff-sentinel.svg)](https://nodejs.org) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > See exactly what a pull request changes in your software bill of materials, and block the risky changes.
 
 `sbom-diff-sentinel` compares two SBOMs, or your project at a git ref against the working tree. It reports components that were **added, removed, upgraded or downgraded**, plus **license, supplier and hash changes**. It checks the added and changed components against **[OSV.dev](https://osv.dev)** and splits the results into **new** and **fixed** vulnerabilities, each with a severity. Then it applies a policy: fail on new vulnerabilities at or above a severity, downgrades, new copyleft licenses or oversized changes.
