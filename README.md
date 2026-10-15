@@ -4,7 +4,7 @@
 
 > See exactly what a pull request changes in your software bill of materials, and block the risky changes.
 
-`sbom-diff-sentinel` compares two SBOMs, or your project at a git ref against the working tree. It reports components that were **added, removed, upgraded or downgraded**, plus **license, supplier and hash changes**. It checks the added and changed components against **[OSV.dev](https://osv.dev)** and splits the results into **new** and **fixed** vulnerabilities, each with a severity. Then it applies a policy: fail on new vulnerabilities at or above a severity, downgrades, new copyleft licenses or oversized changes.
+`sbom-diff-sentinel` compares two SBOMs, or your project at a git ref against the working tree. It reports components that were **added, removed, upgraded or downgraded**, plus **license, supplier and hash changes**. It checks the added and changed components against **[OSV.dev](https://osv.dev)** and splits the results into **new** and **fixed** vulnerabilities, each with a severity. Then it applies a policy: fail on new vulnerabilities at or above a severity, downgrades, tampered hashes or oversized changes. Licence changes are reported (with [license-sentinel](https://www.npmjs.com/package/license-sentinel) categories) but not judged: put your licence policy in license-sentinel.
 
 - Reads **CycloneDX 1.4–1.6 JSON** and **SPDX 2.3 JSON**
 - Generates SBOMs from npm, pnpm and yarn lockfiles with [license-sentinel](https://www.npmjs.com/package/license-sentinel)
@@ -54,8 +54,6 @@ Policy findings (32)
            ↳ See https://osv.dev/vulnerability/GHSA-xvch-5gv4-984h for fixed versions
   high     axios@0.21.0: GHSA-cph5-m8f7-6c5x (CVE-2021-3749) axios Inefficient Regular Expression Complexity vulnerability [new-vulnerability]
   …
-  high     chalk license changed MIT → GPL-3.0-only (strong-copyleft) [copyleft-license]
-  high     New dependency copyleft-lib@1.0.0 is AGPL-3.0-only (network-copyleft) [copyleft-license]
   high     express@4.18.2: hash changed for the same version [hash-changed]
   medium   debug: supplier "TJ Holowaychuk" → "Evil Corp" [supplier-changed]
   medium   minimist downgraded 1.2.8 → 1.2.5 [downgrade]
@@ -64,12 +62,34 @@ Policy findings (32)
 6 change(s): +3 -1 ↑1 ↓1; vulns: 26 new, 1 fixed (checked); 1 critical, 15 high, 14 medium, 2 low
 ```
 
+## VEX, OSV cache and PR comments
+
+```sh
+sbom-diff-sentinel --base origin/main --vex security/openvex.json --pr-comment pr.md
+sbom-diff-sentinel base.cdx.json head.cdx.json --offline        # cached OSV results only
+```
+
+```yaml
+permissions: { contents: read, pull-requests: write }
+steps:
+  - uses: actions/checkout@v4
+    with: { fetch-depth: 0 }
+  - uses: MrLouisWright/sbom-diff-sentinel@v1
+    with: { pr-comment: 'true', vex: 'security/openvex.json' }
+```
+
+Licence policy (copyleft and so on) belongs in [license-sentinel](https://www.npmjs.com/package/license-sentinel); sbom-diff-sentinel only reports licence changes.
+
+### Module formats and types
+
+Ships **ESM and CommonJS** (`import` and `require` both work, via `exports`), with TypeScript declarations generated from the source at build time. Tests run on Node 18/20/22 in GitHub Actions (`test/`), including require/import checks against the packed tarball; releases are published with npm provenance.
+
+
 ## Rules
 
 | Rule | Default severity | What it catches |
 |---|---|---|
 | `new-vulnerability` | the advisory's severity | An added or changed component has an OSV advisory that the base didn't have (matched by ID and aliases) |
-| `copyleft-license` | high | A new dependency, or a license change, brings in copyleft (`--copyleft weak\|strong\|network\|none`, default `strong`). `MIT OR GPL-3.0` counts as permissive |
 | `hash-changed` | high | Same name and version, different hash: a republished or tampered package, or a different mirror |
 | `too-many-changes` | high | More component changes than `--max-changes` |
 | `osv-error` | high | The OSV lookup failed, so the check can't silently pass. Use `--offline` to skip it on purpose |
@@ -97,7 +117,9 @@ Components are matched by package URL without the version (`pkg:npm/lodash`, `pk
 --osv-url <url>        OSV API base URL (default: https://api.osv.dev)
 --timeout <ms>         OSV request timeout (default: 15000)
 --fail-on <sev>        critical | high | medium | low | info | none (default: high)
---copyleft <level>     weak | strong | network | none (default: strong)
+--vex <file>           CycloneDX VEX / OpenVEX (repeatable)
+--cache-dir <dir>      OSV cache directory; --cache-ttl <s>, --no-cache
+--pr-comment <file>    Short PR comment Markdown
 --max-changes <n>      Fail when more than n components change
 --deny-downgrades      Treat downgrades as high severity
 --config <file>        Config file (default: .sbom-diff-sentinel.json or package.json "sbom-diff-sentinel")
@@ -118,13 +140,13 @@ With `--base <ref>`, the tool reads `package.json` and the lockfile at that ref 
 ```json
 {
   "failOn": "high",
-  "copyleft": "strong",
+  "vex": ["security/vex.json"],
   "maxChanges": 40,
   "rules": { "downgrade": "high", "license-changed": "off" },
   "allowlist": [
     { "id": "CVE-2021-3749", "reason": "server-side only, not reachable", "expires": "2027-01-31" },
     { "package": "@internal/*", "rule": "supplier-changed", "reason": "registry migration" },
-    { "package": "copyleft-lib", "rule": "copyleft-license", "reason": "legal approved LEGAL-123" }
+    { "package": "chalk", "rule": "license-changed", "reason": "legal approved LEGAL-123" }
   ]
 }
 ```
@@ -150,7 +172,7 @@ jobs:
           max-changes: '50'
 ```
 
-The Markdown report is written to the job summary. Its path is in `steps.sbom.outputs.markdown-file`, so you can post it as a sticky PR comment (it starts with `<!-- sbom-diff-sentinel -->`). Inputs: `base`, `head`, `project`, `fail-on`, `copyleft`, `max-changes`, `include-dev`, `offline`, `config`, `sarif`, `json`, `job-summary` and `args`.
+The Markdown report is written to the job summary. Its path is in `steps.sbom.outputs.markdown-file`, so you can post it as a sticky PR comment (it starts with `<!-- sbom-diff-sentinel -->`). Inputs: `base`, `head`, `project`, `fail-on`, `vex`, `pr-comment`, `github-token`, `max-changes`, `include-dev`, `offline`, `config`, `sarif`, `json`, `job-summary` and `args`.
 
 ## Library
 

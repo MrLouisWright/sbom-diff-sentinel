@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { readSbom, generateSbom, generateSbomAtRef, generateCycloneDX, analyze, exitCode, formatText, formatJson, formatSarif, formatMarkdown, SEVERITIES } from '../src/index.js';
+import { readSbom, generateSbom, generateSbomAtRef, generateCycloneDX, analyze, exitCode, formatText, formatJson, formatSarif, formatMarkdown, formatPrSummary, SEVERITIES } from '../src/index.js';
 import { loadConfig } from '../src/config.js';
 
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -10,7 +10,7 @@ const HELP = `sbom-diff-sentinel ${pkg.version} — diff two SBOMs and gate on n
 Usage:
   sbom-diff-sentinel <base.json> [head.json]   compare two SBOMs (head defaults to the project)
   sbom-diff-sentinel --base <git-ref>          compare the project at a git ref with the working tree
-  sbom-diff-sentinel --generate [out.json]     write a CycloneDX 1.5 SBOM for the project
+  sbom-diff-sentinel --generate [out.json]     write a CycloneDX SBOM for the project
 
 SBOMs: CycloneDX 1.4–1.6 JSON or SPDX 2.3 JSON. Projects: npm, pnpm or yarn lockfiles
 (SBOMs are generated with license-sentinel).
@@ -20,18 +20,23 @@ Options:
   --head <file|dir>      Head SBOM file or project directory (default: --project)
   -C, --project <dir>    Project directory for generation and git refs (default: .)
   --include-dev          Include devDependencies when generating
-  --offline              Skip the OSV.dev vulnerability lookup
+  --offline              No network: use cached OSV results only (skipped if the cache is empty)
+  --vex <file>           CycloneDX VEX or OpenVEX document (repeatable); not_affected/fixed vulns are suppressed.
+                         VEX embedded in the head CycloneDX SBOM is applied automatically
+  --cache-dir <dir>      OSV cache directory (default: ~/.cache/sbom-diff-sentinel)
+  --cache-ttl <s>        Reuse cached OSV results for s seconds (default: 86400)
+  --no-cache             Don't read or write the OSV cache
   --osv-url <url>        OSV API base URL (default: https://api.osv.dev)
   --timeout <ms>         OSV request timeout (default: 15000)
   --fail-on <sev>        critical | high | medium | low | info | none (default: high)
-  --copyleft <level>     Flag new copyleft: weak | strong | network | none (default: strong)
   --max-changes <n>      Fail when more than n components change
   --deny-downgrades      Treat downgrades as high severity
   --config <file>        Config file (default: .sbom-diff-sentinel.json or package.json "sbom-diff-sentinel")
   --format <fmt>         Stdout format: text | json | sarif | markdown (default: text)
   --json <file>          Also write a JSON report
   --sarif <file>         Also write a SARIF 2.1.0 report
-  --markdown <file>      Also write a Markdown report (PR comment / job summary)
+  --markdown <file>      Also write a Markdown report (job summary)
+  --pr-comment <file>    Also write a short PR comment (verdict, new vulns, licence changes, downgrades)
   --no-fixes             Hide fix suggestions     --no-color   Disable colours
   -q, --quiet            Only print the summary line
   -h, --help | -v, --version
@@ -54,10 +59,15 @@ function parseArgs(argv) {
       case '--generate': { const n = argv[i + 1]; o.generate = n && !n.startsWith('-') ? (i++, n) : '-'; break; }
       case '--include-dev': o.includeDev = true; break;
       case '--offline': o.offline = true; break;
+      case '--vex': (o.vex ||= []).push(need(i)); i++; break;
+      case '--cache-dir': o.cacheDir = need(i); i++; break;
+      case '--cache-ttl': o.cacheTtl = Number(need(i)); i++; if (!(o.cacheTtl >= 0)) throw new Error('Invalid --cache-ttl'); break;
+      case '--no-cache': o.noCache = true; break;
+      case '--pr-comment': o.prComment = need(i); i++; break;
       case '--osv-url': o.osvUrl = need(i); i++; break;
       case '--timeout': o.timeout = Number(need(i)); i++; if (!(o.timeout > 0)) throw new Error('Invalid --timeout'); break;
       case '--fail-on': o.failOn = need(i); i++; if (![...SEVERITIES, 'none'].includes(o.failOn)) throw new Error(`Invalid --fail-on ${o.failOn}`); break;
-      case '--copyleft': o.copyleft = need(i); i++; if (!['weak', 'strong', 'network', 'none'].includes(o.copyleft)) throw new Error(`Invalid --copyleft ${o.copyleft}`); break;
+      case '--copyleft': o.copyleft = need(i); i++; break;
       case '--max-changes': o.maxChanges = Number(need(i)); i++; if (!Number.isInteger(o.maxChanges) || o.maxChanges < 0) throw new Error('Invalid --max-changes'); break;
       case '--deny-downgrades': o.denyDowngrades = true; break;
       case '--config': o.config = need(i); i++; break;
@@ -105,10 +115,10 @@ async function main() {
   const rules = { ...(cfg.rules || {}) };
   if (o.denyDowngrades) rules.downgrade = 'high';
   const copyleft = o.copyleft ? (o.copyleft === 'none' ? false : o.copyleft) : cfg.copyleft;
-  const report = await analyze(base, head, { ...cfg, rules, copyleft, failOn: o.failOn || cfg.failOn, maxChanges: o.maxChanges ?? cfg.maxChanges, offline: o.offline || cfg.offline, osvUrl: o.osvUrl || cfg.osvUrl, timeout: o.timeout || cfg.timeout });
-  const out = { text: () => formatText(report, { color: o.color, fixes: o.fixes }), json: () => formatJson(report), sarif: () => formatSarif(report, pkg.version), markdown: () => formatMarkdown(report) };
+  const report = await analyze(base, head, { ...cfg, rules, copyleft, vex: [...(cfg.vex || []), ...(o.vex || [])], cache: o.noCache ? false : o.cacheDir || cfg.cache, cacheTtl: o.cacheTtl ?? cfg.cacheTtl, failOn: o.failOn || cfg.failOn, maxChanges: o.maxChanges ?? cfg.maxChanges, offline: o.offline || cfg.offline, osvUrl: o.osvUrl || cfg.osvUrl, timeout: o.timeout || cfg.timeout });
+  const out = { text: () => formatText(report, { color: o.color, fixes: o.fixes }), json: () => formatJson(report), sarif: () => formatSarif(report, pkg.version), markdown: () => formatMarkdown(report), prComment: () => formatPrSummary(report) };
   process.stdout.write(o.quiet && o.format === 'text' ? formatText(report, { color: o.color, summaryOnly: true }) : out[o.format]());
-  for (const [k, f] of [['json', o.json], ['sarif', o.sarif], ['markdown', o.markdown]]) if (f) { fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true }); fs.writeFileSync(f, out[k]()); }
+  for (const [k, f] of [['json', o.json], ['sarif', o.sarif], ['markdown', o.markdown], ['prComment', o.prComment]]) if (f) { fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true }); fs.writeFileSync(f, out[k]()); }
   return exitCode(report);
 }
 

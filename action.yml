@@ -7,17 +7,20 @@ inputs:
   head: { description: 'Head SBOM file or project directory (default: project)', default: '' }
   project: { description: 'Project directory', default: '.' }
   fail-on: { description: 'critical | high | medium | low | info | none', default: 'high' }
-  copyleft: { description: 'weak | strong | network | none', default: 'strong' }
+  vex: { description: 'Space-separated CycloneDX VEX / OpenVEX files; not_affected and fixed vulnerabilities are suppressed', default: '' }
+  pr-comment: { description: 'Post or update a sticky PR comment with the short summary (true/false; needs pull-requests: write)', default: 'false' }
+  github-token: { description: 'Token for the PR comment', default: '${{ github.token }}' }
   max-changes: { description: 'Fail when more than this many components change', default: '' }
   include-dev: { description: 'Include devDependencies when generating (true/false)', default: 'false' }
-  offline: { description: 'Skip the OSV.dev lookup (true/false)', default: 'false' }
+  offline: { description: 'No network: use cached OSV results only (true/false)', default: 'false' }
   config: { description: 'Path to JSON config file', default: '' }
   sarif: { description: 'Write SARIF to this path', default: '' }
   json: { description: 'Write JSON report to this path', default: '' }
   job-summary: { description: 'Write the Markdown report to the job summary (true/false)', default: 'true' }
   args: { description: 'Extra CLI arguments', default: '' }
 outputs:
-  markdown-file: { description: 'Path of the Markdown report (post it as a PR comment)', value: '${{ steps.run.outputs.markdown-file }}' }
+  markdown-file: { description: 'Path of the full Markdown report', value: '${{ steps.run.outputs.markdown-file }}' }
+  pr-comment-file: { description: 'Path of the short PR comment Markdown', value: '${{ steps.run.outputs.pr-comment-file }}' }
 runs:
   using: 'composite'
   steps:
@@ -34,7 +37,10 @@ runs:
         SD_HEAD: ${{ inputs.head }}
         SD_PROJECT: ${{ inputs.project }}
         SD_FAIL_ON: ${{ inputs.fail-on }}
-        SD_COPYLEFT: ${{ inputs.copyleft }}
+        SD_VEX: ${{ inputs.vex }}
+        SD_PR_COMMENT: ${{ inputs.pr-comment }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        SD_PR: ${{ github.event.pull_request.number }}
         SD_MAX: ${{ inputs.max-changes }}
         SD_DEV: ${{ inputs.include-dev }}
         SD_OFFLINE: ${{ inputs.offline }}
@@ -47,10 +53,12 @@ runs:
         FORCE_COLOR: '1'
       run: |
         md="$RUNNER_TEMP/sbom-diff-sentinel.md"
+        pr="$RUNNER_TEMP/sbom-diff-sentinel-pr.md"
         base="$SD_BASE"
         if [ -z "$base" ] && [ -n "${GITHUB_BASE_REF:-}" ]; then base="origin/$GITHUB_BASE_REF"; fi
         if [ -z "$base" ]; then echo "::error::No base: set the 'base' input (SBOM file or git ref) or run on pull_request"; exit 2; fi
-        args=(--base "$base" -C "$SD_PROJECT" --fail-on "$SD_FAIL_ON" --copyleft "$SD_COPYLEFT" --markdown "$md")
+        args=(--base "$base" -C "$SD_PROJECT" --fail-on "$SD_FAIL_ON" --markdown "$md" --pr-comment "$pr")
+        for v in $SD_VEX; do args+=(--vex "$v"); done
         [ -n "$SD_HEAD" ] && args+=(--head "$SD_HEAD")
         [ -n "$SD_MAX" ] && args+=(--max-changes "$SD_MAX")
         [ "$SD_DEV" = "true" ] && args+=(--include-dev)
@@ -64,5 +72,11 @@ runs:
         code=$?
         set -e
         echo "markdown-file=$md" >> "$GITHUB_OUTPUT"
+        echo "pr-comment-file=$pr" >> "$GITHUB_OUTPUT"
+        if [ "$SD_PR_COMMENT" = "true" ] && [ -n "$SD_PR" ] && [ -f "$pr" ]; then
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$SD_PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- sbom-diff-sentinel -->")) | .id' | head -n1 || true)
+          if [ -n "$id" ]; then gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@"$pr" >/dev/null || echo "::warning::Could not update the PR comment"
+          else gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$SD_PR/comments" -F body=@"$pr" >/dev/null || echo "::warning::Could not post the PR comment (needs pull-requests: write)"; fi
+        fi
         if [ "$SD_SUMMARY" = "true" ] && [ -f "$md" ]; then cat "$md" >> "$GITHUB_STEP_SUMMARY"; fi
         exit $code

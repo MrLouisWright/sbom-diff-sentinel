@@ -8,7 +8,7 @@ import { parseCycloneDX } from './sbom.js';
 export const LOCKFILES = ['package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'yarn.lock'];
 
 /**
- * Generate a CycloneDX 1.5 SBOM (as an object) for an npm project directory using license-sentinel.
+ * Generate a CycloneDX SBOM (spec version from license-sentinel) (as an object) for an npm project directory using license-sentinel.
  * Lockfiles are preferred over node_modules so both sides of a diff are built the same way.
  */
 export function generateCycloneDX(dir, { includeDev = false, source } = {}) {

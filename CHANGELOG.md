@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-10-15
+
+### Changed
+- **Licence changes are reported, not judged.** The `copyleft-license` rule and `--copyleft` are removed (passing `--copyleft` / `copyleft` now only adds an info warning). `license-changed` findings carry license-sentinel categories (`fromCategory`, `toCategory`); put licence policy in license-sentinel. Depends on license-sentinel ^1.1.0.
+- `--offline` now uses cached OSV results instead of skipping the lookup, and reports components missing from the cache.
+
+### Added
+- VEX: `--vex` takes CycloneDX VEX or OpenVEX documents, and VEX embedded in the head CycloneDX SBOM is applied automatically. `not_affected`, `false_positive`, `fixed` and `resolved` vulnerabilities are suppressed and listed under `vulnerabilities.vex`; other statuses are noted on the finding.
+- On-disk OSV cache (`--cache-dir`, `--cache-ttl`, default 24 h, `--no-cache`), one file per OSV endpoint.
+- `--pr-comment <file>` writes a short sticky PR comment (verdict, new vulnerabilities, licence changes, downgrades). The Action gains `pr-comment`, `github-token` and `vex` inputs and posts or updates the comment. Markdown output stays under GitHub's 65,000-character comment limit.
+- Dual ESM + CommonJS build with generated type declarations; CI checks `require` and `import` from the packed tarball.
+
 ## [1.0.0] - 2026-10-13
 
 ### Added

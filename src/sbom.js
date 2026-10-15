@@ -1,3 +1,4 @@
+import { parseVex } from './vex.js';
 import fs from 'node:fs';
 
 const ALG = (a) => String(a || '').toUpperCase().replace(/^SHA(\d)/, 'SHA-$1').replace(/^SHA-?1$/, 'SHA-1');
@@ -78,7 +79,7 @@ export function parseSbom(input, source = 'SBOM') {
     try { doc = JSON.parse(input); } catch (e) { throw new Error(`${source}: not valid JSON (${e.message})`); }
   }
   if (!doc || typeof doc !== 'object') throw new Error(`${source}: not a JSON object`);
-  if (doc.bomFormat === 'CycloneDX' || (doc.specVersion && Array.isArray(doc.components))) return parseCycloneDX(doc);
+  if (doc.bomFormat === 'CycloneDX' || (doc.specVersion && Array.isArray(doc.components))) { const r = parseCycloneDX(doc); const vex = Array.isArray(doc.vulnerabilities) ? parseVex(doc, `${source} (embedded VEX)`) : []; return vex.length ? { ...r, vex } : r; }
   if (doc.spdxVersion || doc.SPDXID === 'SPDXRef-DOCUMENT') return parseSPDX(doc);
   throw new Error(`${source}: unrecognised SBOM format (expected CycloneDX JSON or SPDX 2.3 JSON)`);
 }

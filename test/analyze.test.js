@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readSbom, parseSbom, diffSboms, analyze, exitCode, lookupVulns } from '../src/index.js';
 import { fx, mockOsv, rec } from './helpers.js';
+import { mkdtempSync as __mk } from 'node:fs';
+import { tmpdir as __tmp } from 'node:os';
+process.env.SBOM_DIFF_SENTINEL_CACHE = __mk(`${__tmp()}/sds-cache-`);
 
 const base = () => readSbom(fx('base.cdx.json'));
 const head = () => readSbom(fx('head.spdx.json'));
@@ -52,15 +55,16 @@ test('analyze with mocked OSV: new vs fixed vs persisting, severities, policy fi
     assert.equal(osv.log.batches.length, 1, 'one batch request');
     assert.equal(osv.log.batches[0].length, 8, 'added(3) + changed heads(2) + removed(1) + changed bases(2)');
     const rules = r.findings.map((f) => `${f.rule}:${f.severity}`);
-    for (const x of ['new-vulnerability:critical', 'new-vulnerability:high', 'new-vulnerability:low', 'copyleft-license:high', 'hash-changed:high', 'downgrade:medium', 'supplier-changed:medium', 'license-changed:low']) assert.ok(rules.includes(x), x);
-    assert.equal(r.findings.filter((f) => f.rule === 'copyleft-license').length, 2, 'chalk license change + copyleft-lib; dual-licensed MIT OR GPL is fine');
+    for (const x of ['new-vulnerability:critical', 'new-vulnerability:high', 'new-vulnerability:low', 'hash-changed:high', 'downgrade:medium', 'supplier-changed:medium', 'license-changed:low']) assert.ok(rules.includes(x), x);
+    assert.equal(r.findings.filter((f) => f.rule === 'copyleft-license').length, 0, 'licence policy moved to license-sentinel');
+    assert.match(r.findings.find((f) => f.rule === 'license-changed').message, /\(permissive\) → .*\(strong-copyleft\)/);
     assert.equal(r.findings[0].severity, 'critical', 'sorted by severity');
     assert.equal(exitCode(r), 1);
     assert.equal(exitCode(r, 'none'), 0);
   } finally { await osv.close(); }
 });
 
-test('allowlist with expiry, rule overrides, copyleft level, maxChanges, offline', async () => {
+test('allowlist with expiry, rule overrides, deprecated copyleft, maxChanges, offline', async () => {
   const osv = await mockOsv({ vulns: { 'pkg:npm/axios@0.21.0': ['GHSA-a'] }, records: { 'GHSA-a': rec('critical', { aliases: ['CVE-2099-1'] }) } });
   try {
     const opts = {
@@ -81,7 +85,7 @@ test('allowlist with expiry, rule overrides, copyleft level, maxChanges, offline
     assert.equal(by('allowlist-expired').length, 1);
     assert.match(by('too-many-changes')[0].message, /6 component changes exceed the maximum of 3/);
     const weak = await analyze(cdx([]), cdx([['lgpl', '1.0.0', { licenses: [{ license: { id: 'LGPL-2.1-only' } }] }]]), { offline: true, copyleft: 'weak' });
-    assert.equal(weak.findings[0].rule, 'copyleft-license');
+    assert.deepEqual(weak.findings.map((f) => f.rule), ['sbom-warning']); assert.match(weak.findings[0].message, /copyleft option was removed/);
     const off = await analyze(base(), head(), { offline: true });
     assert.equal(off.vulnerabilities.status, 'skipped (offline)');
     assert.equal(off.findings.filter((f) => f.rule === 'new-vulnerability').length, 0);
