@@ -176,6 +176,12 @@ The Markdown report is written to the job summary. Its path is in `steps.sbom.ou
 
 ## Library
 
+Install it in your project first:
+
+```bash
+npm install --save-dev sbom-diff-sentinel
+```
+
 ```js
 import { readSbom, generateSbomAtRef, generateSbom, analyze, formatMarkdown, exitCode } from 'sbom-diff-sentinel';
 
